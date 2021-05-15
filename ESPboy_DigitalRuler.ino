@@ -9,13 +9,14 @@ v1.0
 #include <Wire.h>
 #include <VL53L1X.h>
 
-#define DELAY_BETWEEN_READS 100
+#define DELAY_BETWEEN_READS 50
+#define AVERAGE_QUANTITY 10
 
 ESPboyInit myESPboy;
 VL53L1X sensor;
 
-int16_t measuringsRange[10];
-int16_t measuringsAmbient[10];
+int16_t measuringsRange[AVERAGE_QUANTITY];
+int16_t measuringsAmbient[AVERAGE_QUANTITY];
 bool distanceStartFrom; //0 - top of the device; 1 - bottom of the device +9cm
 
 void setup(){
@@ -48,7 +49,7 @@ void setup(){
 
 
 void loop(){
-  static uint16_t range, ambient, stat, count=0;
+  static uint32_t range, ambient, stat, count=0;
   static String tsStatus;
   
 
@@ -60,10 +61,11 @@ void loop(){
 
   measuringsRange[count] = range;
   measuringsAmbient[count] = ambient;
+  count++;
+  if(count>AVERAGE_QUANTITY)count=0;
 
   myESPboy.tft.setTextColor(TFT_WHITE, TFT_BLACK);
   myESPboy.tft.setTextSize(1);
-  
   String toPrint;
   if (distanceStartFrom) toPrint = F("Distance from bottom");
   else toPrint = F("Distance from top   ");
@@ -81,12 +83,12 @@ void loop(){
 
   range=0;
   ambient=0;
-  for (uint8_t i=0; i<10; i++){
+  for (uint8_t i=0; i<AVERAGE_QUANTITY; i++){
     range += measuringsRange[i];
     ambient += measuringsAmbient[i];
   };
-  range/=10;
-  ambient/=10;
+  range/=AVERAGE_QUANTITY;
+  ambient/=AVERAGE_QUANTITY;
   if(distanceStartFrom)range+=90;
   
   myESPboy.tft.setTextSize(4);
@@ -100,9 +102,6 @@ void loop(){
   toPrint += (String)ambient;
   myESPboy.tft.drawString(F("                   "),0,96);
   myESPboy.tft.drawString(toPrint,0,96);
-
-  count++;
-  if(count>10)count=0;
   
   delay(DELAY_BETWEEN_READS);  
 }
